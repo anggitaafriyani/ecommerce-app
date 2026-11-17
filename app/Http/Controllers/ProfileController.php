@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\Order;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -48,9 +51,20 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        Auth::logout();
+        if (Order::where('user_id', $user->id)->exists()) {
+            throw ValidationException::withMessages(['password' => 'Akun dengan pesanan tidak dapat dihapus agar riwayat transaksi tetap tersimpan.'])->errorBag('userDeletion');
+        }
 
-        $user->delete();
+        try {
+            Auth::logout();
+            $user->delete();
+        } catch (QueryException $exception) {
+            Auth::login($user);
+            if ($exception->getCode() !== '23000') {
+                throw $exception;
+            }
+            throw ValidationException::withMessages(['password' => 'Akun masih memiliki transaksi dan tidak dapat dihapus.'])->errorBag('userDeletion');
+        }
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

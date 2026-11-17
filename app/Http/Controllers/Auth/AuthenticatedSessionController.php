@@ -28,7 +28,15 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $intended = $request->session()->pull('url.intended');
+        if ($request->user()->role === 'customer' && is_string($intended)) {
+            $path = parse_url($intended, PHP_URL_PATH);
+            if (str_starts_with($intended, url('/').'/') && is_string($path) && preg_match('#^/(cart|checkout|products/[^/]+)$#', $path)) {
+                return redirect()->to($intended);
+            }
+        }
+
+        return redirect()->route($request->user()->dashboardRoute());
     }
 
     /**

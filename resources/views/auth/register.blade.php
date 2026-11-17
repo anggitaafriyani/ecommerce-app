@@ -1,4 +1,6 @@
 <x-guest-layout>
+    <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">Buat akun PawMart</h1>
+    <p class="mt-2 mb-6 text-sm text-gray-600 dark:text-gray-300">Daftar sebagai Pelanggan. Password minimal 8 karakter dan maksimal 72 byte. Emoji dapat memakai lebih dari satu byte.</p>
     <form method="POST" action="{{ route('register') }}">
         @csrf
 

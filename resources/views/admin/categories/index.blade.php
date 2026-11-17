@@ -1,0 +1,7 @@
+<x-admin-layout title="Kategori produk" subtitle="Susun kebutuhan hewan ke dalam kategori yang mudah dikelola.">
+    <x-slot:actions><a href="{{ route('admin.categories.create') }}" class="pm-button">+ Tambah kategori</a></x-slot:actions>
+    <p class="mb-3 text-xs text-gray-500 sm:hidden">Geser tabel ke samping untuk melihat semua kolom dan tindakan.</p><div class="pm-card overflow-hidden"><div class="overflow-x-auto" tabindex="0" role="region" aria-label="Tabel dapat digulir secara horizontal"><table class="pm-table"><thead><tr><th>Nama kategori</th><th>Deskripsi</th><th>Produk</th><th><span class="sr-only">Tindakan</span></th></tr></thead><tbody>
+        @forelse($categories as $category)<tr><td class="font-semibold">{{ $category->name }}</td><td class="max-w-sm text-gray-500">{{ Str::limit($category->description, 100) ?: '—' }}</td><td>{{ $category->products_count }}</td><td><div class="flex justify-end gap-4"><a class="pm-link" href="{{ route('admin.categories.edit', $category) }}">Edit<span class="sr-only"> {{ $category->name }}</span></a><x-admin-delete :action="route('admin.categories.destroy', $category)" :name="$category->name" :id="'delete-category-'.$category->id" message="Kategori hanya dapat dihapus jika tidak digunakan produk, termasuk produk yang diarsipkan." /></div></td></tr>
+        @empty<tr><td colspan="4" class="py-12 text-center text-gray-500">Belum ada kategori. Mulai dengan menambahkan kategori pertama.</td></tr>@endforelse
+    </tbody></table></div></div><div class="mt-6">{{ $categories->links() }}</div>
+</x-admin-layout>

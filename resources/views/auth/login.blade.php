@@ -1,4 +1,6 @@
 <x-guest-layout>
+    <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">Masuk ke PawMart</h1>
+    <p class="mt-2 mb-6 text-sm text-gray-600 dark:text-gray-300">Satu akun untuk kebutuhan sahabat kecil Anda.</p>
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
@@ -44,4 +46,5 @@
             </x-primary-button>
         </div>
     </form>
+    <p class="mt-6 text-sm text-gray-600 dark:text-gray-300">Belum punya akun? <a href="{{ route('register') }}" class="underline rounded focus:ring-2 focus:ring-green-700">Daftar sebagai Pelanggan</a></p>
 </x-guest-layout>

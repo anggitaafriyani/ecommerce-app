@@ -1,3 +1,4 @@
+import './payment';
 
 
 import Alpine from 'alpinejs';

@@ -3,12 +3,29 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\TestWith;
+use Tests\Concerns\UsesMemoryDatabase;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
 {
-    use RefreshDatabase;
+    use UsesMemoryDatabase;
+
+    #[TestWith(['admin', '/admin/dashboard', 'Dashboard Admin'])]
+    #[TestWith(['customer', '/dashboard', 'Akun Pelanggan'])]
+    public function test_login_dashboard_and_logout_flow_for_each_role(string $role, string $dashboard, string $heading): void
+    {
+        $user = User::factory()->create(['role' => $role]);
+
+        $response = $this->post('/login', ['email' => $user->email, 'password' => 'password']);
+        $response->assertRedirect($dashboard);
+        $this->assertAuthenticatedAs($user);
+        $this->get($dashboard)->assertOk()->assertSee($heading);
+
+        $this->post('/logout')->assertRedirect('/');
+        $this->assertGuest();
+        $this->get($dashboard)->assertRedirect(route('login'));
+    }
 
     public function test_login_screen_can_be_rendered(): void
     {
