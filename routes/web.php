@@ -4,11 +4,13 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ShippingController;
 use App\Http\Controllers\Customer\CartController;
 use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\DashboardController as CustomerDashboardController;
 use App\Http\Controllers\Customer\OrderController;
 use App\Http\Controllers\Customer\PaymentController;
+use App\Http\Controllers\Customer\ProductReviewController;
 use App\Http\Controllers\Customer\StorefrontController;
 use App\Http\Controllers\MidtransNotificationController;
 use App\Http\Controllers\ProfileController;
@@ -16,6 +18,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::pattern('product', '[0-9]+');
 Route::pattern('order', '[0-9]+');
+Route::pattern('item', '[0-9]+');
 Route::post('/midtrans/notification', MidtransNotificationController::class)->name('midtrans.notification');
 
 Route::get('/', [StorefrontController::class, 'home'])->name('home');
@@ -35,9 +38,13 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
     Route::delete('/cart/{product}', [CartController::class, 'destroy'])->name('cart.destroy');
     Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout.create');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/checkout/shipping-rates', [CheckoutController::class, 'shippingRates'])->name('checkout.shipping-rates');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+    Route::post('/orders/{order}/confirm-received', [OrderController::class, 'confirmReceived'])->name('orders.confirm-received');
+    Route::post('/orders/{order}/issues', [OrderController::class, 'reportIssue'])->name('orders.issues.store');
+    Route::post('/orders/{order}/items/{item}/reviews', [ProductReviewController::class, 'store'])->name('orders.items.reviews.store');
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
@@ -45,6 +52,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::resource('categories', CategoryController::class)->except('show');
     Route::resource('products', ProductController::class);
     Route::resource('orders', AdminOrderController::class)->only(['index', 'show', 'update']);
+
+    // Shipping Management
+    Route::get('/shipping', [ShippingController::class, 'index'])->name('shipping.index');
+    Route::post('/shipping/couriers', [ShippingController::class, 'storeCourier'])->name('shipping.couriers.store');
+    Route::patch('/shipping/couriers/{courier}', [ShippingController::class, 'updateCourier'])->name('shipping.couriers.update');
+    Route::post('/shipping/services', [ShippingController::class, 'storeService'])->name('shipping.services.store');
+    Route::patch('/shipping/services/{service}', [ShippingController::class, 'updateService'])->name('shipping.services.update');
+    Route::post('/shipping/rates', [ShippingController::class, 'storeRate'])->name('shipping.rates.store');
+    Route::patch('/shipping/rates/{rate}', [ShippingController::class, 'updateRate'])->name('shipping.rates.update');
+    Route::delete('/shipping/rates/{rate}', [ShippingController::class, 'destroyRate'])->name('shipping.rates.destroy');
 });
 
 Route::middleware('auth')->group(function () {

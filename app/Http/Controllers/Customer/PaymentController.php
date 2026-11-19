@@ -9,6 +9,7 @@ use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use RuntimeException;
@@ -20,9 +21,21 @@ class PaymentController extends Controller
         return Order::where('user_id', $request->user()->id)->with(['items', 'payment'])->findOrFail($id);
     }
 
-    public function show(Request $request, int $order, MidtransClient $client): View
+    public function show(Request $request, int $order, MidtransClient $client, PaymentService $payments): View
     {
-        return view('customer.payment', ['order' => $this->owned($request, $order), 'configured' => $client->configured()]);
+        $orderModel = $this->owned($request, $order);
+
+        // Auto expire if past expiration time
+        if ($orderModel->payment_status === 'pending' && $orderModel->stock_reserved && $orderModel->expires_at && $orderModel->expires_at->isPast()) {
+            try {
+                $payments->cancel($orderModel, true);
+                $orderModel->refresh();
+            } catch (\Throwable $e) {
+                Log::error('Expiry failed: '.$e->getMessage().' in '.$e->getFile().':'.$e->getLine());
+            }
+        }
+
+        return view('customer.payment', ['order' => $orderModel, 'configured' => $client->configured()]);
     }
 
     public function start(Request $request, int $order, PaymentService $payments): JsonResponse
@@ -47,6 +60,24 @@ class PaymentController extends Controller
 
     public function index(Request $request): View
     {
-        return view('customer.orders', ['orders' => Order::where('user_id', $request->user()->id)->with(['items', 'payment'])->latest('id')->paginate(10)]);
+        $status = $request->query('status');
+        $query = Order::where('user_id', $request->user()->id)->with(['items', 'payment']);
+
+        if ($status === 'unpaid') {
+            $query->where('payment_status', 'pending')->where('order_status', 'awaiting_payment');
+        } elseif ($status === 'processing') {
+            $query->where('payment_status', 'paid')->where('order_status', 'processing');
+        } elseif ($status === 'shipped') {
+            $query->where('order_status', 'shipped');
+        } elseif ($status === 'completed') {
+            $query->where('order_status', 'completed');
+        } elseif ($status === 'cancelled') {
+            $query->whereIn('order_status', ['cancelled', 'expired']);
+        }
+
+        return view('customer.orders', [
+            'orders' => $query->latest('id')->paginate(10)->withQueryString(),
+            'currentStatus' => $status ?? 'all',
+        ]);
     }
 }

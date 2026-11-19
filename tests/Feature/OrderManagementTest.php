@@ -62,14 +62,14 @@ class OrderManagementTest extends TestCase
         [$order, $product] = $this->order(true);
         $paymentBefore = $order->payment->getAttributes();
         $before = $order->getAttributes();
-        unset($before['order_status'], $before['updated_at']);
+        unset($before['order_status'], $before['updated_at'], $before['shipped_at'], $before['completed_at']);
         $this->actingAs(User::factory()->admin()->create());
         foreach (['shipped', 'completed'] as $status) {
             $this->patch(route('admin.orders.update', $order), ['order_status' => $status])->assertRedirect(route('admin.orders.show', $order))->assertSessionHas('status');
             $this->assertSame($status, $order->fresh()->order_status);
             $this->assertSame($paymentBefore, $order->payment()->first()->getAttributes());
             $after = $order->fresh()->getAttributes();
-            unset($after['order_status'], $after['updated_at']);
+            unset($after['order_status'], $after['updated_at'], $after['shipped_at'], $after['completed_at']);
             $this->assertSame($before, $after);
             $data = $this->gatewayStatus($order);
             $data['signature_key'] = hash('sha512', $data['order_id'].$data['status_code'].$data['gross_amount'].config('midtrans.signature_secret_key'));
@@ -156,7 +156,7 @@ class OrderManagementTest extends TestCase
         }
         $this->patch(route('admin.orders.update', $order), ['order_status' => 'shipped'])->assertRedirect(route('login'));
         $this->actingAs($customer);
-        $this->get(route('orders.index'))->assertOk()->assertSee($order->order_number)->assertDontSee($other->order_number)->assertSee('Lihat Detail')->assertSee('Lihat Invoice')->assertSee('Lanjutkan pembayaran');
+        $this->get(route('orders.index'))->assertOk()->assertSee($order->order_number)->assertDontSee($other->order_number)->assertSee('Lihat Detail')->assertSee('Lihat Invoice')->assertSee('Bayar Sekarang');
         $this->get(route('orders.show', $other))->assertNotFound();
         $this->get(route('orders.invoice', $other))->assertNotFound();
         $this->get(route('admin.orders.index'))->assertForbidden();
@@ -181,7 +181,7 @@ class OrderManagementTest extends TestCase
         $this->actingAs(User::factory()->create())->get(route('orders.index'))->assertOk()->assertSee('Belum ada pesanan.');
         [$order, , $customer] = $this->order();
         $order->update(['expires_at' => now()->subMinute()]);
-        $this->actingAs($customer)->get(route('orders.index'))->assertOk()->assertDontSee('Lanjutkan pembayaran')->assertSee('Lihat pembayaran');
+        $this->actingAs($customer)->get(route('orders.index'))->assertOk()->assertDontSee('Lanjutkan pembayaran')->assertDontSee('Bayar Sekarang')->assertSee('Lihat Detail');
         $this->get(route('orders.invoice', $order))->assertOk()->assertSee('Menunggu pembayaran');
     }
 

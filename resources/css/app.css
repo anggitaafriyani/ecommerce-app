@@ -2,14 +2,258 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    [x-cloak] {
+        display: none !important;
+    }
+
+    :root {
+        scroll-behavior: smooth;
+    }
+
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+    }
+
+    /* Focus visible — accessible ring for keyboard users */
+    :focus-visible {
+        outline: 2px solid #EA580C;
+        outline-offset: 2px;
+        border-radius: 6px;
+    }
+
+    /* Remove outline for mouse users */
+    :focus:not(:focus-visible) {
+        outline: none;
+    }
+
+    /* Smooth image rendering */
+    img {
+        display: block;
+        max-width: 100%;
+    }
+
+    /* Respect user motion preference */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+}
+
 @layer components {
-    .pm-card { @apply rounded-2xl border border-[#E6E4DF] bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900; }
-    .pm-button { @apply inline-flex items-center justify-center rounded-xl bg-[#2F5D50] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#24483e] focus:outline-none focus:ring-2 focus:ring-[#2F5D50] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50; }
-    .pm-secondary { @apply inline-flex items-center justify-center rounded-xl border border-[#E6E4DF] bg-white px-5 py-3 text-sm font-semibold text-[#25302B] hover:bg-[#FAF7F2] focus:outline-none focus:ring-2 focus:ring-[#2F5D50] dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100; }
-    .pm-link { @apply rounded text-sm font-semibold text-[#2F5D50] underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-[#2F5D50] dark:text-green-300; }
-    .pm-label { @apply mb-2 block text-sm font-semibold; }
-    .pm-input { @apply block w-full rounded-xl border-[#E6E4DF] bg-white text-sm shadow-sm focus:border-[#2F5D50] focus:ring-[#2F5D50] dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100; }
-    .pm-table { @apply w-full text-left text-sm; }
-    .pm-table th { @apply whitespace-nowrap bg-[#FAF7F2] px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-300; }
-    .pm-table td { @apply border-t border-[#E6E4DF] px-6 py-5 align-middle dark:border-gray-700; }
+    /* ——————————————————————————————————————
+       CARDS
+    —————————————————————————————————————— */
+    .pm-card {
+        @apply rounded-2xl border border-pm-border bg-white shadow-xs transition-shadow duration-250 dark:border-gray-700 dark:bg-gray-900;
+    }
+
+    .pm-card-hover {
+        @apply pm-card hover:shadow-card hover:-translate-y-0.5 transition-all duration-250;
+    }
+
+    /* Reference Pet&Co product card */
+    .pm-product-card {
+        @apply relative flex flex-col justify-between overflow-hidden rounded-2xl border border-pm-border/80 bg-white p-4 shadow-xs transition-all duration-250 hover:border-pm-orange/30 hover:shadow-card hover:-translate-y-1 dark:border-gray-700 dark:bg-gray-900;
+    }
+
+    /* Reference circular collection card */
+    .pm-collection-circle {
+        @apply flex flex-col items-center gap-3 transition-transform duration-250 hover:-translate-y-1;
+    }
+
+    .pm-collection-circle-img {
+        @apply flex h-28 w-28 sm:h-32 sm:w-32 items-center justify-center rounded-full border-2 border-pm-border/60 bg-white p-4 shadow-xs transition-all duration-250 group-hover:border-pm-orange group-hover:shadow-card group-hover:scale-105 dark:border-gray-700 dark:bg-gray-800;
+    }
+
+    /* Wishlist heart indicator */
+    .pm-heart-badge {
+        @apply absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-pm-orange-lt text-pm-orange transition-transform duration-250 hover:scale-110;
+    }
+
+    /* ——————————————————————————————————————
+       BUTTONS
+    —————————————————————————————————————— */
+    .pm-button {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl bg-pm-green px-5 py-2.5 text-sm font-semibold text-white shadow-xs transition-all duration-250 hover:bg-pm-green-dk hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pm-green focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98];
+    }
+
+    .pm-button-lg {
+        @apply pm-button px-7 py-3.5 text-base;
+    }
+
+    .pm-secondary {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-pm-border bg-white px-5 py-2.5 text-sm font-semibold text-pm-charcoal shadow-xs transition-all duration-250 hover:bg-pm-cream hover:border-pm-green/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pm-green dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 active:scale-[0.98];
+    }
+
+    .pm-danger {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-semibold text-red-700 transition-all duration-250 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 active:scale-[0.98];
+    }
+
+    .pm-link {
+        @apply rounded text-sm font-semibold text-pm-green underline-offset-4 transition-colors duration-150 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pm-green dark:text-green-300;
+    }
+
+    /* ——————————————————————————————————————
+       FORM ELEMENTS
+    —————————————————————————————————————— */
+    .pm-label {
+        @apply mb-1.5 block text-sm font-semibold text-pm-charcoal dark:text-gray-100;
+    }
+
+    .pm-input {
+        @apply block w-full rounded-xl border-pm-border bg-white py-2.5 text-sm shadow-xs transition-all duration-150 focus:border-pm-green focus:ring-2 focus:ring-pm-green/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:focus:border-green-400;
+    }
+
+    .pm-input-error {
+        @apply pm-input border-red-400 focus:border-red-500 focus:ring-red-200;
+    }
+
+    /* ——————————————————————————————————————
+       BADGES
+    —————————————————————————————————————— */
+    .pm-badge {
+        @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold;
+    }
+
+    .pm-badge-green,
+    .pm-badge-orange,
+    .pm-badge-forest {
+        @apply pm-badge bg-pm-orange-lt text-pm-orange dark:bg-orange-950/60 dark:text-orange-200;
+    }
+
+    .pm-badge-peach {
+        @apply pm-badge bg-orange-100 text-orange-900 dark:bg-orange-900/30 dark:text-orange-200;
+    }
+
+    .pm-badge-red {
+        @apply pm-badge bg-red-50 text-red-800 dark:bg-red-900/40 dark:text-red-300;
+    }
+
+    .pm-badge-gray {
+        @apply pm-badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300;
+    }
+
+    .pm-badge-blue {
+        @apply pm-badge bg-blue-50 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300;
+    }
+
+    /* ——————————————————————————————————————
+       SECTION LABEL (eyebrow text)
+    —————————————————————————————————————— */
+    .pm-eyebrow {
+        @apply text-xs font-semibold uppercase tracking-widest text-pm-green dark:text-green-300;
+    }
+
+    /* ——————————————————————————————————————
+       TABLES
+    —————————————————————————————————————— */
+    .pm-table {
+        @apply w-full text-left text-sm;
+    }
+
+    .pm-table thead {
+        @apply bg-pm-cream dark:bg-gray-800;
+    }
+
+    .pm-table th {
+        @apply whitespace-nowrap px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-pm-muted dark:text-gray-300;
+    }
+
+    .pm-table td {
+        @apply border-t border-pm-border px-5 py-4 align-middle dark:border-gray-700;
+    }
+
+    .pm-table tbody tr {
+        @apply transition-colors duration-150 hover:bg-pm-cream/60 dark:hover:bg-gray-800;
+    }
+
+    /* ——————————————————————————————————————
+       STAT CARD (admin dashboard)
+    —————————————————————————————————————— */
+    .pm-stat-card {
+        @apply pm-card flex flex-col gap-4 p-6;
+    }
+
+    .pm-stat-icon {
+        @apply flex h-10 w-10 items-center justify-center rounded-xl bg-pm-green-lt text-pm-green dark:bg-green-900/50 dark:text-green-300;
+    }
+
+    /* ——————————————————————————————————————
+       NAVIGATION
+    —————————————————————————————————————— */
+    .pm-nav-link {
+        @apply relative text-sm font-medium text-pm-charcoal/70 transition-colors duration-150 hover:text-pm-charcoal after:absolute after:-bottom-0.5 after:left-0 after:h-0.5 after:w-0 after:bg-pm-green after:transition-all after:duration-250 hover:after:w-full dark:text-gray-300 dark:hover:text-gray-100;
+    }
+
+    .pm-nav-link[aria-current="page"] {
+        @apply text-pm-green after:w-full dark:text-green-300;
+    }
+
+    /* ——————————————————————————————————————
+       ALERTS / FLASH
+    —————————————————————————————————————— */
+    .pm-alert-success {
+        @apply flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3.5 text-sm text-green-900 dark:border-green-800 dark:bg-green-900/30 dark:text-green-200;
+    }
+
+    .pm-alert-error {
+        @apply flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300;
+    }
+
+    /* ——————————————————————————————————————
+       QUANTITY STEPPER
+    —————————————————————————————————————— */
+    .pm-qty-btn {
+        @apply flex h-9 w-9 items-center justify-center rounded-lg border border-pm-border bg-white text-pm-charcoal transition-colors duration-150 hover:border-pm-green/40 hover:bg-pm-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pm-green dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700;
+    }
+
+    .pm-qty-input {
+        @apply block w-14 rounded-lg border-pm-border bg-white py-2 text-center text-sm font-semibold focus:border-pm-green focus:ring-2 focus:ring-pm-green/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100;
+    }
+
+    /* ——————————————————————————————————————
+       PRINT STYLES
+    —————————————————————————————————————— */
+    @media print {
+        .pm-card {
+            border: 1px solid #e5e7eb;
+            box-shadow: none;
+        }
+
+        .pm-button,
+        .pm-secondary {
+            border: 1px solid #d1d5db;
+        }
+    }
+}
+
+@layer utilities {
+    /* Scroll margin for anchor links with sticky nav */
+    .scroll-mt-nav {
+        scroll-margin-top: 72px;
+    }
+
+    /* Line clamp utilities */
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
 }

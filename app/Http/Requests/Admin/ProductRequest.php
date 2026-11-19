@@ -20,6 +20,7 @@ class ProductRequest extends FormRequest
             'description' => ['required', 'string', 'max:10000'],
             'price' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'stock' => ['required', 'integer', 'min:0', 'max:2147483647'],
+            'weight' => ['nullable', 'integer', 'min:1', 'max:1000000'],
             'is_active' => ['required', 'boolean'],
             'image' => [$this->isMethod('POST') ? 'required' : 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=4096,max_height=4096'],
         ];

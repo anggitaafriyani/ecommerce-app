@@ -17,7 +17,17 @@ class Order extends Model
 
     protected function casts(): array
     {
-        return ['subtotal' => 'decimal:2', 'shipping_cost' => 'decimal:2', 'total_amount' => 'decimal:2', 'stock_reserved' => 'boolean', 'stock_released_at' => 'datetime', 'expires_at' => 'datetime'];
+        return [
+            'subtotal' => 'decimal:2',
+            'shipping_cost' => 'decimal:2',
+            'total_amount' => 'decimal:2',
+            'total_weight' => 'integer',
+            'stock_reserved' => 'boolean',
+            'stock_released_at' => 'datetime',
+            'expires_at' => 'datetime',
+            'shipped_at' => 'datetime',
+            'completed_at' => 'datetime',
+        ];
     }
 
     public function items(): HasMany
@@ -33,6 +43,37 @@ class Order extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function histories(): HasMany
+    {
+        return $this->hasMany(OrderHistory::class)->orderBy('created_at', 'asc');
+    }
+
+    public function issues(): HasMany
+    {
+        return $this->hasMany(OrderIssue::class)->latest();
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    public function recordHistory(string $status, string $actorType = 'system', ?string $actorName = null, ?string $notes = null): OrderHistory
+    {
+        return $this->histories()->create([
+            'status' => $status,
+            'actor_type' => $actorType,
+            'actor_name' => $actorName,
+            'notes' => $notes,
+            'created_at' => now(),
+        ]);
+    }
+
+    public function canBeConfirmedReceived(): bool
+    {
+        return $this->payment_status === 'paid' && $this->order_status === 'shipped';
     }
 
     public function nextFulfillmentStatus(): ?string

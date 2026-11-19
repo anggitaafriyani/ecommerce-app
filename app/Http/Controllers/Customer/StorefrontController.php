@@ -35,7 +35,11 @@ class StorefrontController extends Controller
 
     public function show(string $slug): View
     {
-        $product = Product::query()->where('is_active', true)->where('slug', $slug)->with('category')->firstOrFail();
+        $product = Product::query()
+            ->where('is_active', true)
+            ->where('slug', $slug)
+            ->with(['category', 'reviews.user'])
+            ->firstOrFail();
 
         return view('customer.products.show', compact('product'));
     }

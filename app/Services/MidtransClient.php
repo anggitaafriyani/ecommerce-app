@@ -120,6 +120,9 @@ class MidtransClient
     {
         try {
             $response = $this->http()->post(self::SNAP.'/'.rawurlencode($token).'/cancel');
+            if ($response->status() === 404 || ($response->successful() && $response->json('canceled_at'))) {
+                return;
+            }
             if (! $response->successful() || ! $response->json('canceled_at')) {
                 throw new RuntimeException;
             }

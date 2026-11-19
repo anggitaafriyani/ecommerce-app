@@ -114,7 +114,7 @@ class StorefrontTest extends TestCase
     }
 
     #[TestWith(['admin', 'Dashboard Admin'])]
-    #[TestWith(['customer', 'Akun saya'])]
+    #[TestWith(['customer', 'Dashboard'])]
     public function test_authenticated_navigation_uses_correct_dashboard(string $role, string $label): void
     {
         $user = User::factory()->create(['role' => $role]);
@@ -142,5 +142,46 @@ class StorefrontTest extends TestCase
         $this->get(route('products.show', $product->slug))->assertOk()->assertSee('Rp99.000,25')->assertSee('4 unit');
         $product->update(['is_active' => false]);
         $this->get(route('products.show', $product->slug))->assertNotFound();
+    }
+
+    public function test_customer_sees_avatar_dropdown_with_dynamic_initials_name_and_email(): void
+    {
+        $customer = User::factory()->create([
+            'name' => 'Farhan Saputra',
+            'email' => 'farhan@example.com',
+            'role' => 'customer',
+        ]);
+
+        $response = $this->actingAs($customer)->get('/products');
+
+        $response->assertOk()
+            ->assertSee('Menu akun Farhan Saputra')
+            ->assertSee('Farhan Saputra')
+            ->assertSee('farhan@example.com')
+            ->assertSee('Profil Saya')
+            ->assertSee(route('profile.edit'))
+            ->assertSee(route('logout'))
+            ->assertDontSee(route('register'));
+    }
+
+    public function test_customer_can_logout_safely_and_redirects_to_home(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+
+        $response = $this->actingAs($customer)->post(route('logout'));
+
+        $response->assertRedirect('/');
+        $this->assertGuest();
+    }
+
+    public function test_guest_does_not_see_avatar_account_dropdown(): void
+    {
+        $response = $this->get('/products');
+
+        $response->assertOk()
+            ->assertSee(route('login'))
+            ->assertSee(route('register'))
+            ->assertDontSee('Profil Saya')
+            ->assertDontSee('Menu akun');
     }
 }

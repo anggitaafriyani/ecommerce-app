@@ -35,12 +35,20 @@ class OrderController extends Controller
 
     public function show(Order $order): View
     {
-        return view('admin.orders.show', ['order' => $order->load(['user', 'items', 'payment'])]);
+        return view('admin.orders.show', [
+            'order' => $order->load(['user', 'items', 'payment', 'histories', 'issues.user']),
+        ]);
     }
 
     public function update(UpdateOrderStatusRequest $request, Order $order, OrderFulfillmentService $fulfillment): RedirectResponse
     {
-        $fulfillment->update($order, $request->validated('order_status'));
+        $fulfillment->update(
+            $order,
+            $request->validated('order_status'),
+            $request->validated('tracking_number'),
+            $request->validated('shipping_notes'),
+            $request->user()?->name ?? 'Admin PawMart'
+        );
 
         return to_route('admin.orders.show', $order)->with('status', 'Status pemrosesan pesanan berhasil diperbarui.');
     }

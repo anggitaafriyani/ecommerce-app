@@ -93,7 +93,7 @@ class PaymentService
                 }
                 if (in_array($order->payment_status, ['paid', 'success'], true)) {
                     if (! $expired) {
-                        throw ValidationException::withMessages(['order' => 'Pesanan terbayar tidak dapat dibatalkan.']);
+                        throw ValidationException::withMessages(['order' => 'Pesanan yang sudah dibayar tidak dapat dibatalkan.']);
                     }
 
                     return;
@@ -111,28 +111,51 @@ class PaymentService
                 if ($data !== null) {
                     $this->apply($order, $payment, $data, 'reconcile');
                     $order->refresh();
-                    if ($order->payment_status !== 'pending') {
-                        if (! $expired) {
-                            $this->cancellationConflict($order, $payment);
+                    if (in_array($order->payment_status, ['paid', 'success'], true)) {
+                        $this->cancellationConflict($order, $payment);
+
+                        return;
+                    }
+
+                    if (in_array($order->payment_status, ['cancelled', 'expired', 'failed'], true) || ! $order->stock_reserved) {
+                        $payment->update(['review_reason' => null]);
+
+                        return;
+                    }
+
+                    $midtransStatus = $data['transaction_status'] ?? '';
+                    if ($midtransStatus === 'pending') {
+                        $this->client->terminate($payment->midtrans_order_id, $expired);
+                        $data = $this->client->status($payment->midtrans_order_id);
+                        if ($data === null) {
+                            throw new RuntimeException('Pembatalan belum dapat diverifikasi.');
+                        }
+                        $this->apply($order, $payment, $data, 'cancel');
+                        $this->cancellationConflict($order->refresh(), $payment);
+                        if (in_array($order->fresh()->payment_status, ['paid', 'success'], true)) {
+                            return;
+                        }
+                        if ($order->fresh()->payment_status === 'pending') {
+                            throw new RuntimeException('Pembayaran masih pending; stok tetap direservasi.');
                         }
 
                         return;
                     }
-                    if (($data['transaction_status'] ?? '') !== 'pending') {
-                        throw new RuntimeException('Status pembayaran memerlukan pemeriksaan sebelum stok dilepas.');
-                    }
-                    $this->client->terminate($payment->midtrans_order_id, $expired);
-                    $data = $this->client->status($payment->midtrans_order_id);
-                    if ($data === null) {
-                        throw new RuntimeException('Pembatalan belum dapat diverifikasi.');
-                    }
-                    $this->apply($order, $payment, $data, 'cancel');
-                    $this->cancellationConflict($order->refresh(), $payment);
-                    if ($order->fresh()->payment_status === 'pending') {
-                        throw new RuntimeException('Pembayaran masih pending; stok tetap direservasi.');
+
+                    if (in_array($midtransStatus, ['expire', 'cancel', 'deny', 'failure'], true)) {
+                        $terminalStatus = match ($midtransStatus) {
+                            'expire' => 'expired',
+                            'cancel' => 'cancelled',
+                            default => 'failed',
+                        };
+                        $this->release($order, $terminalStatus);
+                        $payment->update(['transaction_status' => $midtransStatus, 'review_reason' => null, 'checked_at' => now()]);
+                        $this->event($payment, 'reconcile_terminal', $midtransStatus, $terminalStatus);
+
+                        return;
                     }
 
-                    return;
+                    throw new RuntimeException('Status pembayaran memerlukan pemeriksaan sebelum stok dilepas.');
                 }
                 if (! $payment->snap_token) {
                     throw new RuntimeException('Permintaan token belum dapat dipastikan. Stok ditahan untuk pemeriksaan.');
@@ -142,6 +165,9 @@ class PaymentService
                 if ($data !== null) {
                     $this->apply($order, $payment, $data, 'cancel_session');
                     $this->cancellationConflict($order->refresh(), $payment);
+                    if (in_array($order->fresh()->payment_status, ['paid', 'success'], true)) {
+                        return;
+                    }
                     if ($order->fresh()->payment_status === 'pending') {
                         throw new RuntimeException('Transaksi masih pending.');
                     }
@@ -195,7 +221,7 @@ class PaymentService
         $paid = in_array($status, ['settlement', 'capture'], true) && $code === '200' && ($fraud === null || $fraud === 'accept') && ($status !== 'capture' || $fraud === 'accept');
         $terminal = ['deny' => 'failed', 'failure' => 'failed', 'expire' => 'expired', 'cancel' => 'cancelled'];
         $next = $paid ? 'paid' : ($terminal[$status] ?? null);
-        if ($next && $next !== 'paid' && ! in_array($code, ['200', '202'], true)) {
+        if ($next && $next !== 'paid' && ! in_array($code, ['200', '202', '407'], true)) {
             $next = null;
         }
         $payment->update(['transaction_id' => $transaction, 'payment_type' => substr((string) ($data['payment_type'] ?? ''), 0, 100), 'transaction_status' => substr((string) $status, 0, 100), 'checked_at' => now()]);
@@ -213,6 +239,7 @@ class PaymentService
             $order->update(['payment_status' => 'paid', 'order_status' => $conflict ? 'payment_review' : 'processing', 'stock_reserved' => false]);
             $payment->update(['paid_at' => $payment->paid_at ?? now(), 'review_reason' => $conflict ? 'paid_after_stock_release' : null]);
             $this->event($payment, $source, $status, $conflict ? 'manual_review' : 'paid');
+            $order->recordHistory('processing', 'system', 'Midtrans Gateway', 'Pembayaran berhasil diverifikasi. Pesanan disiapkan penjual.');
 
             return;
         }

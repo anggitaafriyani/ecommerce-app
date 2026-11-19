@@ -13,7 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class CheckoutService
 {
-    public function __construct(private CartService $carts) {}
+    public function __construct(
+        private CartService $carts,
+        private ShippingCalculatorService $shippingCalculator
+    ) {}
 
     public function place(User $user, array $data): Order
     {
@@ -35,6 +38,7 @@ class CheckoutService
             }
             $products = Product::whereIn('id', $items->pluck('product_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
             $subtotal = 0;
+            $totalWeight = 0;
             $snapshots = [];
             foreach ($items as $item) {
                 $product = $products->get($item->product_id);
@@ -47,21 +51,45 @@ class CheckoutService
                 if ($subtotal > 999999999999) {
                     throw ValidationException::withMessages(['cart' => 'Total pesanan melebihi batas transaksi.']);
                 }
+                $productWeight = $product->weight ?? 500;
+                $totalWeight += $productWeight * $item->quantity;
                 $snapshots[] = ['product_id' => $product->id, 'product_name' => $product->name, 'product_price' => $product->price, 'quantity' => $item->quantity, 'subtotal' => Money::decimal($line)];
             }
-            $shipping = (int) config('pawmart.shipping_cost', 15000) * 100;
-            $total = $subtotal + $shipping;
-            if ($shipping < 0 || $total > 999999999999) {
+
+            // Calculate shipping via internal ShippingCalculatorService
+            $courierCode = $data['courier_code'] ?? null;
+            $serviceCode = $data['courier_service'] ?? null;
+            $shippingInfo = $this->shippingCalculator->calculate(
+                $data['province'],
+                $data['city'],
+                $totalWeight,
+                $courierCode,
+                $serviceCode
+            );
+
+            if (! $shippingInfo) {
+                throw ValidationException::withMessages(['courier_service' => 'Layanan pengiriman ke wilayah tujuan belum tersedia atau tarif tidak ditemukan.']);
+            }
+
+            $shippingCost = (int) round($shippingInfo['shipping_cost'] * 100);
+            $total = $subtotal + $shippingCost;
+
+            if ($shippingCost < 0 || $total > 999999999999) {
                 throw ValidationException::withMessages(['cart' => 'Total pesanan melebihi batas transaksi.']);
             }
+
             $order = new Order;
             $order->fill(collect($data)->only(['recipient_name', 'recipient_phone', 'shipping_address', 'city', 'province', 'postal_code', 'notes'])->all());
             $order->forceFill([
                 'user_id' => $user->id,
                 'order_number' => 'PWM-'.Str::ulid(),
                 'checkout_token' => $data['checkout_token'],
+                'courier_code' => $shippingInfo['courier_code'],
+                'courier_name' => $shippingInfo['courier_name'],
+                'courier_service' => $shippingInfo['service_name'],
+                'total_weight' => $totalWeight,
                 'subtotal' => Money::decimal($subtotal),
-                'shipping_cost' => Money::decimal($shipping),
+                'shipping_cost' => Money::decimal($shippingCost),
                 'total_amount' => Money::decimal($total),
                 'total_price' => Money::decimal($total),
                 'payment_status' => 'pending',
@@ -69,6 +97,9 @@ class CheckoutService
                 'stock_reserved' => true,
                 'expires_at' => now()->addMinutes((int) config('pawmart.reservation_minutes', 60)),
             ])->save();
+
+            $order->recordHistory('awaiting_payment', 'customer', $user->name, 'Pesanan dibuat oleh pelanggan.');
+
             $order->items()->createMany($snapshots);
             foreach ($items as $item) {
                 $products[$item->product_id]->decrement('stock', $item->quantity);

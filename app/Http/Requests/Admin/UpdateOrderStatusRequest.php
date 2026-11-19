@@ -26,6 +26,8 @@ class UpdateOrderStatusRequest extends FormRequest
     {
         return [
             'order_status' => ['required', Rule::in(['shipped', 'completed'])],
+            'tracking_number' => ['nullable', 'string', 'max:100'],
+            'shipping_notes' => ['nullable', 'string', 'max:1000'],
             'payment_status' => ['prohibited'],
             'transaction_status' => ['prohibited'],
             'stock_reserved' => ['prohibited'],

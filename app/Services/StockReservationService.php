@@ -25,7 +25,7 @@ class StockReservationService
                 }
                 throw ValidationException::withMessages(['order' => 'Pesanan ini tidak dapat dibatalkan.']);
             }
-            if ($expired && (! $order->expires_at || $order->expires_at->isFuture())) {
+            if (! $gatewayVerified && $expired && (! $order->expires_at || $order->expires_at->isFuture())) {
                 return;
             }
             $items = $order->items()->orderBy('product_id')->get();
@@ -33,7 +33,13 @@ class StockReservationService
             foreach ($items as $item) {
                 $products->get($item->product_id)?->increment('stock', $item->quantity);
             }
-            $order->update(['stock_reserved' => false, 'stock_released_at' => now(), 'payment_status' => $expired ? 'expired' : 'failed', 'order_status' => 'cancelled']);
+            $order->update(['stock_reserved' => false, 'stock_released_at' => now(), 'payment_status' => $expired ? 'expired' : 'cancelled', 'order_status' => 'cancelled']);
+            $order->recordHistory(
+                'cancelled',
+                $expired ? 'system' : 'customer',
+                $expired ? 'Sistem PawMart' : auth()->user()?->name,
+                $expired ? 'Batas waktu pembayaran telah habis. Pesanan dibatalkan otomatis dan stok dikembalikan.' : 'Pesanan dibatalkan oleh pelanggan dan stok dikembalikan.'
+            );
         }, 3);
     }
 }

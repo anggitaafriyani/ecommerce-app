@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CategoryRequest;
 use App\Models\Category;
+use App\Services\CategoryService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -23,9 +24,9 @@ class CategoryController extends Controller
         return view('admin.categories.form', ['category' => new Category]);
     }
 
-    public function store(CategoryRequest $request): RedirectResponse
+    public function store(CategoryRequest $request, CategoryService $service): RedirectResponse
     {
-        Category::create($request->validated());
+        $service->save(new Category, $request->safe()->except('image'), $request->file('image'));
 
         return to_route('admin.categories.index')->with('status', 'Kategori berhasil ditambahkan.');
     }
@@ -35,9 +36,9 @@ class CategoryController extends Controller
         return view('admin.categories.form', compact('category'));
     }
 
-    public function update(CategoryRequest $request, Category $category): RedirectResponse
+    public function update(CategoryRequest $request, Category $category, CategoryService $service): RedirectResponse
     {
-        $category->update($request->validated());
+        $service->save($category, $request->safe()->except('image'), $request->file('image'));
 
         return to_route('admin.categories.index')->with('status', 'Kategori berhasil diperbarui.');
     }
